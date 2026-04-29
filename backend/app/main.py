@@ -23,7 +23,7 @@ except Exception:
     # Allow the module to be imported (and `/health` to work) even if
     # env vars / `.env` aren't present in the current environment.
     class _FallbackSettings:  # noqa: N801
-        ALLOWED_ORIGINS = ["http://localhost:3000"]
+        ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:5173"]
         RATE_LIMIT_PER_MINUTE = 30
         GEMINI_API_KEY = ""
         GOOGLE_CLOUD_PROJECT = ""
@@ -54,10 +54,19 @@ app.include_router(timeline_router)
 
 @app.on_event("startup")
 async def startup_event() -> None:
-    app.state.firestore_client = firestore.Client(
-        project=settings.GOOGLE_CLOUD_PROJECT
-    )
-    app.state.gemini_service = GeminiService(api_key=settings.GEMINI_API_KEY)
+    try:
+        app.state.firestore_client = firestore.Client(
+            project=settings.GOOGLE_CLOUD_PROJECT
+        )
+    except Exception as e:
+        print(f"Warning: Failed to initialize Firestore client: {e}")
+        app.state.firestore_client = None
+
+    try:
+        app.state.gemini_service = GeminiService(api_key=settings.GEMINI_API_KEY)
+    except Exception as e:
+        print(f"Warning: Failed to initialize Gemini service: {e}")
+        app.state.gemini_service = None
 
 
 @app.get("/health")

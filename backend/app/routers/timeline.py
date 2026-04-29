@@ -2,121 +2,171 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.models.schemas import TimelineEvent
+from app.models.schemas import ApiResponse, ElectionPhase, ElectionStep, ElectionTimelineResponse
 
 router = APIRouter(prefix="/api", tags=["timeline"])
 
 
-@router.get("/timeline", response_model=list[TimelineEvent])
-async def get_timeline() -> list[TimelineEvent]:
+@router.get("/timeline", response_model=ApiResponse)
+async def get_timeline() -> ApiResponse:
     """
-    Static election process timeline for CivicMind.
+    Detailed election process timeline for CivicMind.
     """
-    return [
-        TimelineEvent(
-            id="announcement",
-            icon="📢",
-            title="Election Announcement & Model Code of Conduct",
-            description=(
-                "The Election Commission of India announces the election schedule and key dates. "
-                "From this moment, the Model Code of Conduct (MCC) comes into force and applies to governments, parties, and candidates. "
-                "All official actions and campaign activities must now strictly follow ECI rules to ensure a level playing field."
-            ),
-            phase="Pre-Election",
-            order=1,
-            typical_duration_days=10,
+    phases = [
+        ElectionPhase(
+            id="pre-poll",
+            name="Pre-Election",
+            color="#d4a017",
+            steps=[
+                ElectionStep(
+                    id="announcement",
+                    phase="Pre-Election",
+                    title="Election Announcement",
+                    description="The Election Commission of India announces the election schedule and the Model Code of Conduct comes into force.",
+                    duration="Day 0",
+                    order=1,
+                    details=[
+                        "Release of press note by ECI",
+                        "Immediate enforcement of MCC",
+                        "Publication of key dates (Notification, Nomination, Polling, Counting)"
+                    ]
+                ),
+                ElectionStep(
+                    id="voter-list",
+                    phase="Pre-Election",
+                    title="Voter List Finalization",
+                    description="Electoral rolls are updated to include new voters and correct existing entries.",
+                    duration="Ongoing",
+                    order=2,
+                    details=[
+                        "Verification by Booth Level Officers (BLOs)",
+                        "Online application via Voter Portal/App",
+                        "Publication of final electoral rolls"
+                    ]
+                ),
+                ElectionStep(
+                    id="nomination",
+                    phase="Pre-Election",
+                    title="Candidate Nomination",
+                    description="Prospective candidates file nomination papers with the Returning Officer.",
+                    duration="7-10 Days",
+                    order=3,
+                    details=[
+                        "Filing of Form 2A/2B",
+                        "Submission of security deposit",
+                        "Affidavits on criminal records and assets"
+                    ]
+                ),
+                ElectionStep(
+                    id="scrutiny",
+                    phase="Pre-Election",
+                    title="Scrutiny & Withdrawal",
+                    description="Returning Officer scrutinizes nominations and candidates may withdraw.",
+                    duration="3 Days",
+                    order=4,
+                    details=[
+                        "RO examines validity of nomination papers",
+                        "Opportunity for candidates to resolve objections",
+                        "Final list of contesting candidates published"
+                    ]
+                ),
+            ]
         ),
-        TimelineEvent(
-            id="voter-list",
-            icon="📋",
-            title="Voter List Finalization",
-            description=(
-                "Electoral rolls are updated to include new voters and correct existing entries. "
-                "Citizens can use Forms 6, 6A, 6B, 6C, and 8 (as applicable) to apply for inclusion, overseas registration, corrections, or shifting of entries. "
-                "Booth Level Officers and election officials verify applications before the final voter list is published."
-            ),
-            phase="Pre-Election",
-            order=2,
-            typical_duration_days=20,
-        ),
-        TimelineEvent(
-            id="nomination",
-            icon="📝",
-            title="Candidate Nomination",
-            description=(
-                "Prospective candidates file nomination papers with the Returning Officer for their constituency. "
-                "They must submit required forms, affidavits on criminal cases and assets, and party authorization if contesting on a party symbol. "
-                "Nominations must be filed within the window announced in the election schedule."
-            ),
-            phase="Pre-Election",
-            order=3,
-            typical_duration_days=7,
-        ),
-        TimelineEvent(
-            id="scrutiny",
-            icon="🔍",
-            title="Scrutiny & Withdrawal of Candidature",
-            description=(
-                "The Returning Officer scrutinizes all nomination papers for completeness and legal compliance. "
-                "Invalid nominations are rejected after giving candidates an opportunity to be heard. "
-                "A short window is then provided where validly nominated candidates may withdraw their candidature if they choose."
-            ),
-            phase="Pre-Election",
-            order=4,
-            typical_duration_days=3,
-        ),
-        TimelineEvent(
+        ElectionPhase(
             id="campaign",
-            icon="📣",
-            title="Election Campaign",
-            description=(
-                "Approved candidates and political parties reach out to voters through rallies, door-to-door campaigns, and media. "
-                "All campaign activities must follow the Model Code of Conduct, expenditure limits, and ECI guidelines on advertising and hate speech. "
-                "Campaigning usually intensifies closer to polling day but must stop during the official silence period before voting."
-            ),
-            phase="Campaign",
-            order=5,
-            typical_duration_days=20,
+            name="Campaign",
+            color="#3b82f6",
+            steps=[
+                ElectionStep(
+                    id="campaigning",
+                    phase="Campaign",
+                    title="Election Campaign",
+                    description="Approved candidates reach out to voters through rallies and media.",
+                    duration="14-20 Days",
+                    order=5,
+                    details=[
+                        "Door-to-door campaigning",
+                        "Public rallies and manifestos",
+                        "Strict adherence to MCC and expenditure limits"
+                    ]
+                ),
+                ElectionStep(
+                    id="silence",
+                    phase="Campaign",
+                    title="Silence Period",
+                    description="All active campaigning stops 48 hours before the conclusion of polling.",
+                    duration="48 Hours",
+                    order=6,
+                    details=[
+                        "Ban on public meetings and rallies",
+                        "Restriction on bulk SMS/social media campaigning",
+                        "Focus on internal party booth preparation"
+                    ]
+                ),
+            ]
         ),
-        TimelineEvent(
-            id="voting",
-            icon="🗳️",
-            title="Voting Day & EVM/VVPAT",
-            description=(
-                "On polling day, registered voters cast their votes at designated polling stations using EVMs (Electronic Voting Machines). "
-                "VVPAT (Voter Verifiable Paper Audit Trail) units allow voters to visually confirm their chosen candidate on a paper slip before it drops into a sealed box. "
-                "Strict security, identification, and secrecy-of-ballot procedures are followed throughout the polling process."
-            ),
-            phase="Polling",
-            order=6,
-            typical_duration_days=1,
+        ElectionPhase(
+            id="polling",
+            name="Polling",
+            color="#10b981",
+            steps=[
+                ElectionStep(
+                    id="voting",
+                    phase="Polling",
+                    title="Voting Day",
+                    description="Registered voters cast their votes at designated polling stations.",
+                    duration="1 Day",
+                    order=7,
+                    details=[
+                        "Verification of ID (EPIC/Alternate documents)",
+                        "Voting via EVM and VVPAT confirmation",
+                        "Sealing of EVMs after polling concludes"
+                    ]
+                ),
+            ]
         ),
-        TimelineEvent(
-            id="counting",
-            icon="📊",
-            title="Vote Counting & Results",
-            description=(
-                "On the designated counting day, sealed EVMs and VVPAT slips are opened in secure counting centres. "
-                "Votes are tallied under the supervision of Returning Officers and in the presence of candidate agents. "
-                "After counting and mandatory VVPAT checks as per ECI norms, results are declared constituency-wise."
-            ),
-            phase="Post-Poll",
-            order=7,
-            typical_duration_days=1,
-        ),
-        TimelineEvent(
-            id="formation",
-            icon="🏛️",
-            title="Government Formation",
-            description=(
-                "Based on the final seat tally, the party or coalition with a majority stake is invited to form the government. "
-                "Leaders elect or nominate their chief representative (Prime Minister or Chief Minister, as applicable) to head the government. "
-                "The new council of ministers is sworn in, and the legislative body begins its term under constitutional procedures."
-            ),
-            phase="Post-Poll",
-            order=8,
-            typical_duration_days=15,
-        ),
+        ElectionPhase(
+            id="post-poll",
+            name="Post-Poll",
+            color="#ef4444",
+            steps=[
+                ElectionStep(
+                    id="counting",
+                    phase="Post-Poll",
+                    title="Counting & Results",
+                    description="Votes are tallied and results are declared constituency-wise.",
+                    duration="1 Day",
+                    order=8,
+                    details=[
+                        "Counting under RO supervision",
+                        "Mandatory VVPAT slip verification (5 random booths)",
+                        "Declaration of winners and certificate issue"
+                    ]
+                ),
+                ElectionStep(
+                    id="formation",
+                    phase="Post-Poll",
+                    title="Government Formation",
+                    description="The majority party or coalition is invited to form the government.",
+                    duration="10-15 Days",
+                    order=9,
+                    details=[
+                        "Leader election by winning party",
+                        "Invitation by President/Governor",
+                        "Swearing-in ceremony"
+                    ]
+                ),
+            ]
+        )
     ]
+    
+    total_steps = sum(len(p.steps) for p in phases)
+    
+    return ApiResponse(
+        data=ElectionTimelineResponse(
+            phases=phases,
+            total_steps=total_steps
+        )
+    )
 
 

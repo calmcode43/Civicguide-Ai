@@ -17,14 +17,32 @@ class ChatResponse(BaseModel):
     sources: list[str] = []
 
 
-class TimelineEvent(BaseModel):
+class ElectionStep(BaseModel):
     id: str
+    phase: str
     title: str
     description: str
-    phase: str
+    duration: str
     order: int
-    icon: str
-    typical_duration_days: int
+    details: list[str]
+
+
+class ElectionPhase(BaseModel):
+    id: str
+    name: str
+    color: str
+    steps: list[ElectionStep]
+
+
+class ElectionTimelineResponse(BaseModel):
+    phases: list[ElectionPhase]
+    total_steps: int
+
+
+class ApiResponse(BaseModel):
+    data: ElectionTimelineResponse
+    status: str = "success"
+    error: str | None = None
 
 
 class TranslateRequest(BaseModel):
@@ -35,4 +53,14 @@ class TranslateRequest(BaseModel):
 class TranslateResponse(BaseModel):
     translated_text: str
     detected_source: str
+
+
+class TimelineEvent(BaseModel):
+    id: str
+    title: str
+    description: str
+    phase: str
+    order: int
+    icon: str
+    typical_duration_days: int
 
