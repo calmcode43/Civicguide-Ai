@@ -3,6 +3,7 @@
 CivicMind is an India-focused election-process assistant built for Google Prompt Wars. It helps users understand voter enrolment, election timelines, nomination stages, polling-day flow, ballot terminology, and post-result process steps in a clear, interactive, non-partisan way.
 
 Live Demo: https://new--project-82b99.web.app
+
 API Backend: https://civicmind-api-854444982376.asia-south1.run.app
 
 ## Chosen Vertical
