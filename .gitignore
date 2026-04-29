@@ -1,0 +1,11 @@
+.env
+.env.local
+*.env
+serviceAccount.json
+__pycache__
+.pytest_cache
+node_modules
+.next
+dist
+*.pyc
+.DS_Store
