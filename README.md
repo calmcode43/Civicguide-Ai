@@ -1,36 +1,89 @@
-# CivicMind
+# CivicMind | AI Indian Election Process Assistant
 
-CivicMind is a production-grade, AI-powered Indian Election Process Assistant featuring a visually stunning 3D frontend.
+CivicMind is an AI-powered platform designed to guide Indian citizens through the complexities of the election process. It provides an interactive 3D timeline of the democratic journey, an AI-powered election assistant, and tools to decode ballots and plan voting.
 
-## Repository Structure
+## 🚀 Key Features
 
-- `frontend/`: Next.js 14 + TypeScript + Tailwind + Three.js
-- `backend/`: FastAPI + Python 3.11
+- **Interactive 3D Timeline**: A visual, step-by-step map of the entire election cycle from announcement to government formation.
+- **AI Election Assistant**: Real-time answers to queries about voting rules, candidate information, and constitutional procedures powered by Google Gemini.
+- **Ballot Decoder**: Simplify complex ballot information for better voter understanding.
+- **Voting Plan**: Personalized guides to help citizens ensure their vote is cast correctly.
 
-## Tech Stack
+## 🛠️ Technology Stack
 
 ### Frontend
-- **Framework**: Next.js 14 (App Router)
-- **Styling**: Tailwind CSS, Framer Motion
-- **3D Graphics**: Three.js, React Three Fiber, React Three Drei
-- **UI Components**: Radix UI, Lucide React
-- **State/Data**: Firebase
+- **Framework**: React 18 with Vite
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion & GSAP
+- **3D Rendering**: React Three Fiber & Three.js
+- **State Management**: Zustand
 
 ### Backend
-- **Framework**: FastAPI
-- **AI**: Google Gemini API
-- **Database**: Firestore (via google-cloud-firestore)
-- **Deployment**: Google Cloud Run (Docker)
+- **Framework**: FastAPI (Python 3.10+)
+- **AI Integration**: Google Gemini API
+- **Rate Limiting**: SlowAPI
+- **Documentation**: Swagger/OpenAPI
 
-## Getting Started
+## 📦 Getting Started
 
-### Backend Setup
-1. `cd backend`
-2. `pip install -r requirements.txt`
-3. Copy `.env.example` to `.env` and fill in your keys.
-4. `uvicorn app.main:app --reload`
+### Prerequisites
+- Node.js (v18+)
+- Python (v3.10+)
+- Google Gemini API Key
 
-### Frontend Setup
-1. `cd frontend`
-2. `npm install`
-3. `npm run dev`
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/calmcode43/Civicguide-Ai.git
+   cd Civicguide-Ai
+   ```
+
+2. **Setup Backend**:
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   pip install -r requirements.txt
+   ```
+   Create a `.env` file in the `backend` directory:
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key
+   GOOGLE_CLOUD_PROJECT=your_project_id
+   ALLOWED_ORIGINS=http://localhost:5173
+   ```
+
+3. **Setup Frontend**:
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+   Create a `.env` file in the `frontend` directory:
+   ```env
+   VITE_API_BASE_URL=http://localhost:8080
+   ```
+
+### Running Locally
+
+1. **Start the Backend**:
+   ```bash
+   cd backend
+   uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+   ```
+
+2. **Start the Frontend**:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   The application will be available at `http://localhost:5173`.
+
+## 🛡️ Recent Updates
+
+- **Vite Migration**: Migrated from Next.js to Vite for faster development and optimized build performance.
+- **Firebase Removal**: Transitioned from Firebase Hosting/Auth to a localized backend architecture to support more robust AI integrations.
+- **Timeline Fixes**: Realigned the 3D timeline with the backend API for a more premium and responsive user experience.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
