@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { HeroCanvas } from '@/components/three';
 import SEO from '@/components/SEO';
 import { GoldButton } from '@/components/ui';
+import DeferredThreeMount from '@/components/three/DeferredThreeMount';
+import { LazyThreeScene } from '@/components/three/LazyThreeScene';
 import { HERO_SUBTITLE, FEATURE_CARDS, HOW_IT_WORKS } from '@/config/content';
 
 // Register GSAP plugins
@@ -47,6 +48,7 @@ export default function LandingPage() {
   const ctaRef = useRef<HTMLElement>(null);
 
   const { scrollYProgress } = useScroll();
+  const prefersReducedMotion = useReducedMotion();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
 
@@ -88,7 +90,16 @@ export default function LandingPage() {
         path="/"
       />
       {/* Background Layer */}
-      <HeroCanvas />
+      {prefersReducedMotion ? (
+        <div className="pointer-events-none fixed inset-0 z-0 bg-void" aria-hidden="true" />
+      ) : (
+        <DeferredThreeMount
+          className="pointer-events-none fixed inset-0 z-0"
+          fallback={<div className="pointer-events-none fixed inset-0 z-0 bg-void" aria-hidden="true" />}
+        >
+          <LazyThreeScene loader={() => import('@/components/three/HeroCanvas')} />
+        </DeferredThreeMount>
+      )}
 
       {/* -------------------------------------------------------------------- */}
       {/* SECTION 1: HERO                                                      */}

@@ -6,6 +6,13 @@ from typing import Generic, Literal, TypeVar
 from pydantic import BaseModel, Field
 
 LanguageCode = Literal["en", "hi"]
+StageContext = Literal[
+    "Pre-Announcement",
+    "Registration & Roll Check",
+    "Campaign Period",
+    "Polling Day",
+    "Counting & Results",
+]
 T = TypeVar("T")
 
 
@@ -26,6 +33,7 @@ class HealthPayload(BaseModel):
     environment: str
     backend_ready: bool
     gemini_ready: bool
+    translate_ready: bool
     firestore_mode: Literal["firestore", "memory"]
     rate_limit_per_minute: int
     cloud_project_id: str | None = None
@@ -44,6 +52,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     language: LanguageCode = "en"
     user_context: str = Field(default="general", max_length=80)
+    stage_context: StageContext | None = None
 
 
 class ChatReplyPayload(BaseModel):
@@ -67,6 +76,7 @@ class SessionSummary(BaseModel):
     id: str
     title: str
     user_context: str
+    stage_context: StageContext | None = None
     language: LanguageCode = "en"
     message_count: int
     updated_at: datetime
@@ -112,6 +122,7 @@ class ElectionTimelinePayload(BaseModel):
 class SuggestionsPayload(BaseModel):
     persona: str
     language: LanguageCode = "en"
+    stage_context: StageContext | None = None
     suggestions: list[str] = Field(default_factory=list)
 
 
@@ -130,6 +141,7 @@ class VotingPlanRequest(BaseModel):
     location_context: str = Field(..., min_length=1, max_length=120)
     planning_focus: str = Field(..., min_length=1, max_length=120)
     language: LanguageCode = "en"
+    stage_context: StageContext | None = None
 
 
 class VotingPlanPayload(BaseModel):

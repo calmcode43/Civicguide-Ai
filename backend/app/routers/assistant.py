@@ -21,14 +21,21 @@ async def get_suggestions(
     request: Request,
     persona: str = Query(default="general"),
     language: str = Query(default="en"),
+    stage_context: str | None = Query(default=None),
 ) -> ApiResponse[SuggestionsPayload]:
     assistant_service = request.app.state.assistant_service
     normalized_persona = assistant_service.normalize_persona(persona)
-    suggestions = assistant_service.get_suggestions(persona=normalized_persona, intent="general")
+    normalized_stage = assistant_service.normalize_stage_context(stage_context, intent="general")
+    suggestions = assistant_service.get_suggestions(
+        persona=normalized_persona,
+        intent="general",
+        stage_context=normalized_stage,
+    )
     return ApiResponse(
         data=SuggestionsPayload(
             persona=normalized_persona,
             language=language if language in {"en", "hi"} else "en",
+            stage_context=normalized_stage,
             suggestions=suggestions,
         )
     )

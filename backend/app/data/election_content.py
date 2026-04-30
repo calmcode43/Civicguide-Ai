@@ -17,6 +17,80 @@ OFFICIAL_RESOURCES: dict[str, OfficialResource] = {
     ),
 }
 
+STAGE_PLAYBOOKS: dict[str, str] = {
+    "Pre-Announcement": (
+        "Focus on readiness before any live schedule exists. Emphasize roll verification, "
+        "document readiness, constituency awareness, and avoiding invented dates."
+    ),
+    "Registration & Roll Check": (
+        "Focus on enrolment, corrections, transfers, qualifying details, and how to confirm "
+        "the final electoral roll status through official channels."
+    ),
+    "Campaign Period": (
+        "Focus on candidate information, campaign rules, MCC awareness, official notices, "
+        "and how voters or candidates should prepare before polling."
+    ),
+    "Polling Day": (
+        "Focus on booth verification, identity proof, queue process, accessibility support, "
+        "EVM/VVPAT flow, and what to do if details do not match."
+    ),
+    "Counting & Results": (
+        "Focus on counting supervision, VVPAT verification context, result declaration, "
+        "certificate issuance, and government-formation process without inventing live leads."
+    ),
+}
+
+STAGE_NOTES: dict[str, list[str]] = {
+    "Pre-Announcement": [
+        "No live polling or counting date should be assumed before ECI publishes the schedule.",
+        "Users are best served by checking enrolment readiness, address accuracy, and official voter-service records.",
+    ],
+    "Registration & Roll Check": [
+        "This stage is about confirming whether the voter is correctly listed and whether any correction or transfer is still needed.",
+        "Users should rely on the official Voters' Service Portal and final roll verification, not unofficial forwards.",
+    ],
+    "Campaign Period": [
+        "Once the schedule is announced, campaign conduct and Model Code of Conduct restrictions matter.",
+        "Voters often need candidate information, while candidates need compliance and nomination clarity.",
+    ],
+    "Polling Day": [
+        "Advice should stay procedural and practical: booth, ID proof, queue sequence, and EVM/VVPAT confidence.",
+        "The answer should remind the user to verify booth details officially if location-specific guidance is needed.",
+    ],
+    "Counting & Results": [
+        "Advice should explain counting procedure and constitutional next steps, but never invent current seat counts or live outcomes.",
+        "Official results and declarations should be anchored to ECI sources.",
+    ],
+}
+
+STAGE_SUGGESTIONS: dict[str, list[str]] = {
+    "Pre-Announcement": [
+        "What should I verify before the election schedule is announced?",
+        "How do I check if my voter details are correct in advance?",
+        "What documents should I keep ready before polling dates are published?",
+    ],
+    "Registration & Roll Check": [
+        "How do I check whether my name is on the voter list?",
+        "What should I do if my address or voter details need correction?",
+        "When should I use Form 6 or Form 8?",
+    ],
+    "Campaign Period": [
+        "What happens after the election schedule is announced?",
+        "How does the Model Code of Conduct affect campaigns?",
+        "What should I verify before the silence period starts?",
+    ],
+    "Polling Day": [
+        "What happens at the polling booth step by step?",
+        "Which ID proofs are usually accepted for voting?",
+        "How does VVPAT confirmation work?",
+    ],
+    "Counting & Results": [
+        "How are votes counted in India?",
+        "What is the role of VVPAT during counting?",
+        "How is the government formed after results?",
+    ],
+}
+
 PERSONA_HINTS: dict[str, str] = {
     "first-time voter": (
         "The user may need simple explanations, document checklists, and clarity on "

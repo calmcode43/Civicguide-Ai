@@ -184,3 +184,27 @@ async def test_assistant_service_uses_task_specific_token_limits() -> None:
     )
 
     assert recorder.max_output_tokens == [111, 222, 333]
+
+
+class StreamFailingGeminiService:
+    async def stream(self, prompt: str, *, max_output_tokens: int, **_: object):
+        raise ResourceExhausted("quota exceeded")
+        yield prompt
+
+
+@pytest.mark.asyncio
+async def test_assistant_service_streams_deterministic_fallback_when_gemini_stream_fails() -> None:
+    assistant = AssistantService(StreamFailingGeminiService())  # type: ignore[arg-type]
+    prepared = assistant.prepare_chat(
+        message="How do I check if I am registered?",
+        history=[],
+        language="en",
+        user_context="First-Time Voter",
+        stage_context="Registration & Roll Check",
+    )
+
+    chunks = [chunk async for chunk in assistant.stream_chat_reply(prepared)]
+    reply = "".join(chunks)
+
+    assert "Here is the clearest way to approach this:" in reply
+    assert "Registration & Roll Check" in reply

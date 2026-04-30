@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from typing import AsyncGenerator
 
@@ -33,6 +34,7 @@ async def chat(request: Request, payload: ChatRequest) -> ApiResponse[ChatReplyP
         payload.session_id,
         language=payload.language,
         user_context=payload.user_context,
+        stage_context=payload.stage_context,
     )
     history = await session_store.get_history(session_id, limit=settings.SESSION_HISTORY_LIMIT)
 
@@ -41,6 +43,7 @@ async def chat(request: Request, payload: ChatRequest) -> ApiResponse[ChatReplyP
         history=history,
         language=payload.language,
         user_context=payload.user_context,
+        stage_context=payload.stage_context,
     )
 
     await session_store.add_message(
@@ -83,31 +86,77 @@ async def chat_stream(request: Request, payload: ChatRequest) -> StreamingRespon
         payload.session_id,
         language=payload.language,
         user_context=payload.user_context,
+        stage_context=payload.stage_context,
     )
     history = await session_store.get_history(session_id, limit=settings.SESSION_HISTORY_LIMIT)
-    result = await assistant_service.generate_chat_response(
+    prepared = assistant_service.prepare_chat(
         message=message,
         history=history,
         language=payload.language,
         user_context=payload.user_context,
+        stage_context=payload.stage_context,
     )
 
     async def event_generator() -> AsyncGenerator[str, None]:
-        yield f"data: {result.reply}\n\n"
+        yield (
+            "data: "
+            + json.dumps(
+                {
+                    "type": "meta",
+                    "session_id": session_id,
+                    "intent": prepared.intent,
+                    "suggestions": prepared.suggestions,
+                    "sources": [source.model_dump() for source in prepared.sources],
+                    "stage_context": prepared.stage_context,
+                    "persona": prepared.persona,
+                }
+            )
+            + "\n\n"
+        )
+
+        chunks: list[str] = []
+        async for chunk in assistant_service.stream_chat_reply(prepared):
+            chunks.append(chunk)
+            yield "data: " + json.dumps({"type": "chunk", "content": chunk}) + "\n\n"
+
+        reply = "".join(chunks).strip() or prepared.fallback_reply
+
         await session_store.add_message(
             session_id,
             role="user",
             content=message,
             language=payload.language,
-            intent=result.intent,
+            intent=prepared.intent,
         )
         await session_store.add_message(
             session_id,
             role="assistant",
-            content=result.reply,
+            content=reply,
             language=payload.language,
-            intent=result.intent,
+            intent=prepared.intent,
         )
-        yield "data: [DONE]\n\n"
+        yield (
+            "data: "
+            + json.dumps(
+                {
+                    "type": "done",
+                    "reply": reply,
+                    "intent": prepared.intent,
+                    "suggestions": prepared.suggestions,
+                    "sources": [source.model_dump() for source in prepared.sources],
+                    "stage_context": prepared.stage_context,
+                    "persona": prepared.persona,
+                }
+            )
+            + "\n\n"
+        )
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

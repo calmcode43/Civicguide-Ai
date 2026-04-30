@@ -30,7 +30,7 @@ export default function HeroCanvas() {
         <ThreeErrorBoundary componentName="HeroCanvas">
           <Canvas
             shadows={false}
-            dpr={[1, 2]} // Performance optimization for high-density displays
+            dpr={[1, 1.75]} // Performance optimization for high-density displays
             gl={{ antialias: true, alpha: true }}
           >
             <Suspense fallback={null}>

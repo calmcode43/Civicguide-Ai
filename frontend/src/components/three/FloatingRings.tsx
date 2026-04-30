@@ -10,14 +10,13 @@ import * as THREE from 'three';
 export default function FloatingRings() {
   const groupRef = useRef<THREE.Group>(null);
 
-  // Generate 5 decorative rings with varying properties
+  // Keep the decorative scene light enough for low-powered devices.
   const rings = useMemo(() => {
     return [
-      { radius: 1.5, color: '#d4a017', opacity: 0.08, rotationSpeed: 0.005, axis: 'x' as const },
-      { radius: 2.5, color: '#00c9a7', opacity: 0.06, rotationSpeed: 0.003, axis: 'y' as const },
-      { radius: 3.5, color: '#d4a017', opacity: 0.08, rotationSpeed: 0.002, axis: 'z' as const },
-      { radius: 4.0, color: '#00c9a7', opacity: 0.06, rotationSpeed: 0.004, axis: 'x' as const },
-      { radius: 5.0, color: '#d4a017', opacity: 0.08, rotationSpeed: 0.001, axis: 'y' as const },
+      { radius: 1.6, color: '#d4a017', opacity: 0.08, rotationSpeed: 0.004, axis: 'x' as const },
+      { radius: 2.7, color: '#00c9a7', opacity: 0.06, rotationSpeed: 0.0025, axis: 'y' as const },
+      { radius: 3.7, color: '#d4a017', opacity: 0.07, rotationSpeed: 0.0018, axis: 'z' as const },
+      { radius: 4.6, color: '#00c9a7', opacity: 0.05, rotationSpeed: 0.003, axis: 'x' as const },
     ].map((r, i) => ({
       ...r,
       id: i,
@@ -54,7 +53,7 @@ export default function FloatingRings() {
           ref={(el) => (ringRefs.current[i] = el)}
           rotation={ring.tilt}
         >
-          <torusGeometry args={[ring.radius, 0.015, 16, 100]} />
+          <torusGeometry args={[ring.radius, 0.014, 12, 64]} />
           <meshBasicMaterial
             color={ring.color}
             transparent

@@ -13,9 +13,9 @@ function Globe() {
   const globeRef = useRef<THREE.Group>(null);
   const wireframeRef = useRef<THREE.LineSegments>(null);
 
-  // Generate 12 random orbit rings
+  // Keep the decorative scene lighter than the original always-on version.
   const rings = useMemo(() => {
-    return Array.from({ length: 12 }).map((_, i) => ({
+    return Array.from({ length: 8 }).map((_, i) => ({
       id: i,
       radius: 2.8 + Math.random() * 0.8,
       tube: 0.005,
@@ -46,20 +46,20 @@ function Globe() {
     <group ref={globeRef}>
       {/* 1. Wireframe Globe */}
       <lineSegments ref={wireframeRef}>
-        <wireframeGeometry args={[new THREE.SphereGeometry(2.5, 32, 32)]} />
+        <wireframeGeometry args={[new THREE.SphereGeometry(2.5, 22, 22)]} />
         <lineBasicMaterial color="#d4a017" transparent opacity={0.25} />
       </lineSegments>
 
       {/* 2. Inner occlusion sphere (to hide back-facing lines) */}
       <mesh>
-        <sphereGeometry args={[2.48, 32, 32]} />
+        <sphereGeometry args={[2.48, 22, 22]} />
         <meshBasicMaterial color="#0d0f1a" />
       </mesh>
 
       {/* 3. Orbit Rings */}
       {rings.map((ring) => (
         <mesh key={ring.id} rotation={ring.rotation}>
-          <torusGeometry args={[ring.radius, ring.tube, 16, 100]} />
+          <torusGeometry args={[ring.radius, ring.tube, 12, 72]} />
           <meshBasicMaterial color="#d4a017" transparent opacity={ring.opacity} />
         </mesh>
       ))}
@@ -76,7 +76,7 @@ export default function GlobeScene() {
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <WebGLCheck>
         <ThreeErrorBoundary componentName="GlobeScene">
-          <Canvas gl={{ antialias: true, alpha: true }}>
+          <Canvas gl={{ antialias: true, alpha: true }} dpr={[1, 1.75]}>
             <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={45} />
 
             <ambientLight intensity={0.5} />

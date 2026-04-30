@@ -18,7 +18,9 @@ This project is designed for users who need reliable election-process help witho
 
 - Answers free-form election-process questions.
 - Adjusts guidance for `First-Time Voter`, `Returning Voter`, `Candidate`, and `Observer`.
+- Adapts replies to the active election stage: `Pre-Announcement`, `Registration & Roll Check`, `Campaign Period`, `Polling Day`, or `Counting & Results`.
 - Avoids inventing live dates or constituency-specific facts.
+- Streams replies progressively from the backend, supports in-answer translation, and captures answer quality feedback.
 - Uses a Gemini model chain first, then falls back to grounded built-in guidance if Gemini is unavailable or throttled.
 
 ### 2. Interactive Timeline
@@ -26,11 +28,13 @@ This project is designed for users who need reliable election-process help witho
 - Explains the Indian election process from schedule announcement to government formation.
 - Includes detailed stage cards and AI deep links into the assistant.
 - Preserves accessibility with keyboard-safe card navigation.
+- Maps each timeline phase back into assistant stage context so follow-up answers stay anchored to the selected election phase.
 
 ### 3. Voting Plan Generator
 
 - Walks the user through a short planning flow.
 - Produces a practical polling-day checklist.
+- Lets the user choose the current election stage so the checklist changes with their situation.
 - Pushes live verification back to official channels.
 
 ### 4. Ballot Decoder
@@ -47,7 +51,7 @@ This project is designed for users who need reliable election-process help witho
 
 - **Smart, dynamic assistant**: backend intent detection and persona-aware responses change the guidance path based on user context.
 - **Logical decision making**: the assistant, suggestions, voting plan, and ballot decoder all branch according to user needs and election stage.
-- **Google services integration**: Gemini, Firestore, Firebase Hosting, Google Analytics for Firebase, and Cloud Run are all integrated into the deployment design.
+- **Google services integration**: Gemini, Firestore, Firebase Hosting, Firebase Analytics, Google Translate, and Cloud Run are all integrated into the deployment design.
 - **Practical usability**: the product supports both exploratory learning and task-based flows.
 - **Clean code**: the backend is separated into routers, services, schemas, and tests; the frontend uses typed state and a clearer runtime config model.
 
@@ -86,6 +90,7 @@ This project is designed for users who need reliable election-process help witho
 
 - Stores sessions, conversation history, and feedback.
 - Supports cross-project access from Cloud Run through service-account credentials.
+- Acts as the canonical session source when the backend is reachable, with local storage reserved as an offline cache.
 
 ### Firebase Hosting
 
@@ -95,6 +100,12 @@ This project is designed for users who need reliable election-process help witho
 ### Firebase Analytics
 
 - Initialised only in the browser and only in production-safe conditions.
+- Logs only coarse product events such as assistant query send, stream start/completion, timeline ask-AI clicks, voting-plan generation, ballot decoding, translation requests, feedback submission, and session deletion.
+
+### Google Translate
+
+- Powers one-click answer translation into Hindi, Punjabi, Tamil, Telugu, and Bengali.
+- Uses a bounded in-memory cache and a safe backend fallback path.
 
 ### Cloud Run
 
@@ -165,6 +176,7 @@ VITE_FIREBASE_MEASUREMENT_ID=G-DQ8DX55P9Y
 
 - `backend/app/services/assistant_service.py`
   - detects intent and persona
+  - threads election-stage context into prompts, suggestions, and deterministic fallback
   - trims prompt history and applies task-specific token caps
   - returns deterministic fallback guidance when the Gemini model chain is unavailable
 
@@ -176,7 +188,7 @@ VITE_FIREBASE_MEASUREMENT_ID=G-DQ8DX55P9Y
 - `backend/app/services/gemini_service.py`
   - tries `gemini-2.0-flash` first and `gemini-1.5-flash` second by default
   - retries on quota, rate-limit, resource-exhausted, and model-unavailable style errors
-  - preserves a final local fallback path through the assistant service
+  - preserves a final local fallback path through the assistant service for both one-shot and streamed replies
 
 - `backend/app/data/election_content.py`
   - stores India-specific timeline content, suggestions, and official references
@@ -188,6 +200,7 @@ VITE_FIREBASE_MEASUREMENT_ID=G-DQ8DX55P9Y
 - `GET /api/timeline`
 - `GET /api/suggestions`
 - `POST /api/chat`
+- `POST /api/chat/stream`
 - `GET /api/sessions`
 - `GET /api/sessions/{session_id}`
 - `DELETE /api/sessions/{session_id}`
@@ -220,28 +233,34 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 ## Verification Completed
 
-The current codebase was re-verified locally on **April 29, 2026** with:
+The current codebase was re-verified locally on **April 30, 2026** with:
 
 ```bash
 cd backend && pytest -q
 cd backend && python3 -m compileall app tests
+cd frontend && npm run lint
+cd frontend && npm run test
 cd frontend && npm run build
 git ls-files -z | xargs -0 du -ch 2>/dev/null | tail -n 1
 ```
 
 Results:
 
-- `9 passed` in backend tests
+- `17 passed` in backend tests
 - backend compile pass
+- frontend typecheck pass
+- `7 passed` in frontend tests
 - frontend production build pass
-- tracked repository size: about `812K`, well under the `10 MB` limit
+- tracked repository size: about `932K`, well under the `10 MB` limit
 
 Additional browser smoke checks were completed locally for:
 
 - landing page rendering
-- assistant chat
+- assistant chat and streamed reply rendering
 - assistant deep-link prefill flow
+- translated answer rendering and feedback submission
 - timeline rendering
+- Firestore-backed session hydration and deletion behavior
 - milestone countdown flow
 
 ## Deployment Files Included
@@ -281,9 +300,26 @@ firebase deploy --project new--project-82b99 --only hosting
 - Guest mode is acceptable for the challenge submission; the backend still supports Firestore persistence when credentials are configured.
 - The Firestore service-account JSON must stay out of git and should be mounted or injected through Secret Manager in production.
 
+## Security And Accessibility
+
+- Firebase Hosting sends a CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy`.
+- The backend never returns raw internal exception strings on `500` responses and attaches `X-Request-ID` for traceability.
+- Translation failures use a safe generic service error instead of leaking provider details.
+- The UI keeps a global skip link, keyboard-safe session actions, accessible stage and feedback controls, mobile-nav focus management, and automated axe coverage for navigation.
+
+## CI
+
+GitHub Actions runs:
+
+- backend `pytest -q`
+- backend `python3 -m compileall app tests`
+- frontend `npm run lint`
+- frontend `npm run test`
+- frontend `npm run build`
+
 ## Deployment Status
 
-**Live deployment completed on April 29, 2026**
+**Live deployment completed on April 30, 2026**
 
 - Frontend URL: `https://new--project-82b99.web.app`
 - Alternate frontend URL: `https://new--project-82b99.firebaseapp.com`
@@ -292,8 +328,9 @@ firebase deploy --project new--project-82b99 --only hosting
 Live checks completed after deployment:
 
 - `GET /` returns the CivicMind API status payload instead of `404`
-- `GET /api/health` returns `gemini_ready=true` and `firestore_project_id=new--project-82b99`
+- `GET /api/health` returns `gemini_ready=true`, `translate_ready=true`, and `firestore_project_id=new--project-82b99`
 - a real browser-side assistant chat from the deployed frontend succeeded against the deployed backend
+- direct `POST /api/translate` requests succeed against the deployed backend
 - Firestore-backed session records are being written in the new Firebase project
 
 The backend and frontend use a low-cost deployment profile:

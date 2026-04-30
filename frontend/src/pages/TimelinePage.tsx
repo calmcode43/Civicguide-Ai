@@ -1,43 +1,26 @@
-import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Canvas } from '@react-three/fiber';
-import { Line } from '@react-three/drei';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import SEO from '@/components/SEO';
-import axios from 'axios';
 
-import { TimelineOrb, FloatingRings, ParticleField, ThreeErrorBoundary, WebGLCheck } from '@/components/three';
 import { GoldButton, ErrorBanner } from '@/components/ui';
-import { type ElectionTimelineResponse } from '@/types';
+import DeferredThreeMount from '@/components/three/DeferredThreeMount';
+import { LazyThreeScene } from '@/components/three/LazyThreeScene';
+import { trackEvent } from '@/lib/analytics';
+import apiClient from '@/lib/apiClient';
+import { type ElectionTimelineResponse, type StageContext } from '@/types';
 
 // =============================================================================
 // Constants & Helpers
 // =============================================================================
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-
-/**
- * Dynamic S-curve chain with depth and wobble.
- * Increased vertical and horizontal spread for a professional 'DNA-like' structure.
- */
-/**
- * Dynamic chain with depth and wobble.
- * Supports both vertical (desktop) and horizontal (mobile) layouts.
- */
-const getOrbPosition = (index: number, total: number, isMobile: boolean = false): [number, number, number] => {
-  const spread = Math.max(total - 1, 1);
-  if (isMobile) {
-    // Horizontal layout for mobile strip
-    const x = (index - spread / 2) * 1.8;
-    const y = Math.sin(index * 1.2) * 0.3; // Gentle wave
-    const z = Math.cos(index * 1.2) * 0.2;
-    return [x, y, z];
-  }
-  // Vertical layout for desktop sidebar
-  const x = Math.sin(index * 0.8) * 1.2;
-  const y = (spread / 2 - index) * 1.4;
-  const z = Math.cos(index * 0.8) * 0.4;
-  return [x, y, z];
+const PHASE_STAGE_MAP: Record<string, StageContext> = {
+  'Pre-Election': 'Pre-Announcement',
+  Nomination: 'Campaign Period',
+  Campaign: 'Campaign Period',
+  Polling: 'Polling Day',
+  Counting: 'Counting & Results',
+  Result: 'Counting & Results',
 };
 
 // =============================================================================
@@ -70,112 +53,6 @@ function LoadingSkeleton() {
   );
 }
 
-/** Right-side sticky 3D panel — shows all orbs in a vertical chain */
-function OrbPanel({
-  steps,
-  phases,
-  activeStepId,
-  onOrbClick,
-  onOrbHover,
-}: {
-  steps: any[];
-  phases: any[];
-  activeStepId: string | null;
-  onOrbClick: (id: string) => void;
-  onOrbHover?: (id: string) => void;
-}) {
-  const isMobile = steps.length > 0 && window.innerWidth < 1024;
-  const spread = Math.max(steps.length - 1, 1) * (isMobile ? 1.8 : 1.4);
-  const fov = isMobile ? 45 : 54;
-  
-  // Calculate camera distance based on spread
-  const camDist = (spread / 2) / Math.tan((fov * Math.PI) / 360) + (isMobile ? 2.5 : 3.0);
-  const camZ = isMobile ? camDist : Math.max(7, Math.min(camDist, 20));
-  const camPos: [number, number, number] = isMobile ? [0, 0, camZ] : [0.4, 0, camZ];
-
-  return (
-    <div className={`relative w-full h-full flex ${isMobile ? 'flex-row' : 'flex-col'}`} aria-hidden="true">
-
-      {/* ── Phase legend ──────────────────────────────────────────── */}
-      <div className={`${isMobile ? 'hidden' : 'px-6 pt-4 pb-3 border-b border-border/30 flex flex-col gap-2'}`}>
-        {phases.map(p => (
-          <div key={p.id} className="flex items-center gap-2.5">
-            <span
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: p.color }}
-            />
-            <span
-              className="text-[11px] uppercase tracking-wide font-medium"
-              style={{ color: p.color, opacity: 0.9 }}
-            >
-              {p.name}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── 3D Canvas ─────────────────────────────────────────────── */}
-      <div className="flex-1 relative" style={{ minHeight: 0 }}>
-        <WebGLCheck>
-          <ThreeErrorBoundary componentName="OrbPanelCanvas">
-            <Canvas
-              camera={{ position: camPos, fov }}
-              style={{ background: 'transparent', touchAction: 'none' }}
-              gl={{ antialias: true }}
-              dpr={[1, 2]}
-            >
-              <Suspense fallback={null}>
-                <ambientLight intensity={0.65} />
-                <pointLight position={[3, 5, 5]} intensity={1.4} color="#d4a017" />
-                <pointLight position={[-3, -3, 4]} intensity={0.5} color="#7b8db0" />
-
-                {/* Connection spine */}
-                {steps.length > 1 && (
-                  <Line
-                    points={steps.map((_, i) => getOrbPosition(i, steps.length, isMobile))}
-                    color="#d4a017"
-                    lineWidth={isMobile ? 12 : 8}
-                    transparent
-                    opacity={0.7}
-                  />
-                )}
-
-                {/* Orbs */}
-                {steps.map((step, i) => (
-                  <group key={step.id} position={getOrbPosition(i, steps.length, isMobile)}>
-                    <TimelineOrb
-                      index={i}
-                      phase={step.phase}
-                      title={step.title}
-                      isActive={activeStepId === step.id}
-                      onClick={() => onOrbClick(step.id)}
-                      onHover={() => !isMobile && onOrbHover?.(step.id)}
-                    />
-                  </group>
-                ))}
-              </Suspense>
-            </Canvas>
-          </ThreeErrorBoundary>
-        </WebGLCheck>
-
-        {/* Step counter */}
-        <div
-          className="absolute bottom-2 left-0 right-0 flex flex-col items-center gap-0.5 pointer-events-none"
-          style={{ zIndex: 5 }}
-        >
-          <span className="text-[11px] text-gold font-bold uppercase tracking-widest">
-            {steps.length} steps
-          </span>
-          <span className="text-[9px] text-text-secondary/60 uppercase tracking-wider">
-            tap orb to navigate
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
 // =============================================================================
 // TimelinePage
 // =============================================================================
@@ -183,6 +60,7 @@ function OrbPanel({
 export default function TimelinePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const prefersReducedMotion = useReducedMotion();
 
   const [data, setData] = useState<ElectionTimelineResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,10 +76,10 @@ export default function TimelinePage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_BASE}/api/timeline`);
+      const response = await apiClient.get('/api/timeline');
       if (response.data?.data) setData(response.data.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Failed to load election timeline. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load election timeline. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -241,8 +119,15 @@ export default function TimelinePage() {
     });
   };
 
-  const handleAskAI = (title: string) =>
-    navigate(`/assistant?prefill=${encodeURIComponent(`Tell me more about ${title}`)}`);
+  const handleAskAI = async (title: string, phase: string) => {
+    const stageContext = PHASE_STAGE_MAP[phase] ?? 'Pre-Announcement';
+    await trackEvent('timeline_ask_ai_clicked', {
+      stage_context: stageContext,
+    });
+    navigate(
+      `/assistant?prefill=${encodeURIComponent(`Tell me more about ${title}`)}&stage=${encodeURIComponent(stageContext)}`
+    );
+  };
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -267,17 +152,11 @@ export default function TimelinePage() {
           aria-hidden="true"
           style={{ opacity: 0.25, zIndex: 0 }}
         >
-          <WebGLCheck>
-            <ThreeErrorBoundary componentName="HeroBg">
-              <Canvas>
-                <Suspense fallback={null}>
-                  <FloatingRings />
-                  <ParticleField />
-                  <ambientLight intensity={0.4} />
-                </Suspense>
-              </Canvas>
-            </ThreeErrorBoundary>
-          </WebGLCheck>
+          {!prefersReducedMotion ? (
+            <DeferredThreeMount className="h-full w-full" fallback={<div className="h-full w-full" />}>
+              <LazyThreeScene loader={() => import('@/components/timeline/TimelineHeroBackground3D')} />
+            </DeferredThreeMount>
+          ) : null}
         </div>
 
         <div className="relative text-center px-5 sm:px-10 py-10 sm:py-14" style={{ zIndex: 1 }}>
@@ -364,7 +243,6 @@ export default function TimelinePage() {
 
         {/* ── LEFT: Scrollable content list ──────────────────────────── */}
         <section
-          id="main-content"
           aria-label="Election process timeline"
           className="flex-1 py-8 sm:py-10 px-6 sm:px-10 lg:px-12 lg:pr-8 min-w-0 pb-40 lg:pb-10"
         >
@@ -529,7 +407,7 @@ export default function TimelinePage() {
                               {isExpanded ? <>Hide <span aria-hidden="true">↑</span></> : <>Details <span aria-hidden="true">↓</span></>}
                             </button>
                             <button
-                              onClick={() => handleAskAI(step.title)}
+                              onClick={() => void handleAskAI(step.title, step.phase)}
                               className="px-3 py-1 rounded-full text-[9px] font-bold text-text-secondary border border-border/40 hover:border-gold hover:text-gold hover:bg-gold/5 transition-all uppercase tracking-widest whitespace-nowrap"
                             >
                               Ask AI →
@@ -546,7 +424,7 @@ export default function TimelinePage() {
         </section>
 
         {/* ── RIGHT: Sticky 3D orb chain — desktop only ──────────────── */}
-        {!loading && !error && filteredSteps.length > 0 && (
+        {!loading && !error && filteredSteps.length > 0 && !prefersReducedMotion && (
           <aside
             className="hidden lg:flex flex-col"
             style={{
@@ -582,21 +460,33 @@ export default function TimelinePage() {
 
             {/* Canvas fills the rest */}
             <div className="flex-1 relative" style={{ minHeight: 0 }}>
-              <OrbPanel
-                steps={filteredSteps}
-                phases={phases}
-                activeStepId={activeStepId}
-                onOrbClick={handleStepClick}
-                onOrbHover={(id) => {
-                  cardRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }}
-              />
+              <DeferredThreeMount
+                className="h-full w-full"
+                fallback={
+                  <div className="flex h-full items-center justify-center px-6 text-center text-xs uppercase tracking-widest text-text-secondary/60">
+                    Loading process map…
+                  </div>
+                }
+              >
+                <LazyThreeScene
+                  loader={() => import('@/components/timeline/TimelineOrbPanel3D')}
+                  props={{
+                    steps: filteredSteps,
+                    phases,
+                    activeStepId,
+                    onOrbClick: handleStepClick,
+                    onOrbHover: (id: string) => {
+                      cardRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    },
+                  }}
+                />
+              </DeferredThreeMount>
             </div>
           </aside>
         )}
 
         {/* ── Mobile 3D strip — sticky at bottom ─── */}
-        {!loading && !error && filteredSteps.length > 0 && (
+        {!loading && !error && filteredSteps.length > 0 && !prefersReducedMotion && (
           <div
             className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border/40 safe-area-bottom"
             style={{ 
@@ -610,12 +500,17 @@ export default function TimelinePage() {
             <div className="absolute top-2 left-0 right-0 flex justify-center z-10 pointer-events-none">
                <div className="w-12 h-1 rounded-full bg-border/40" />
             </div>
-            <OrbPanel
-              steps={filteredSteps}
-              phases={phases}
-              activeStepId={activeStepId}
-              onOrbClick={handleStepClick}
-            />
+            <DeferredThreeMount className="h-full w-full" fallback={<div className="h-full w-full" />}>
+              <LazyThreeScene
+                loader={() => import('@/components/timeline/TimelineOrbPanel3D')}
+                props={{
+                  steps: filteredSteps,
+                  phases,
+                  activeStepId,
+                  onOrbClick: handleStepClick,
+                }}
+              />
+            </DeferredThreeMount>
           </div>
         )}
       </div>

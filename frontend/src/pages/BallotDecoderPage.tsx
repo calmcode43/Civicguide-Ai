@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import SEO from '@/components/SEO';
+import { trackEvent } from '@/lib/analytics';
 import apiClient from '@/lib/apiClient';
 import type { ApiResponse, OfficialResource } from '@/types';
 
@@ -117,6 +118,9 @@ export default function BallotDecoderPage() {
       setAiExplanation(response.data.data.explanation);
       setRelatedTerms(response.data.data.related_terms ?? []);
       setSources(response.data.data.sources ?? []);
+      await trackEvent('ballot_term_decoded', {
+        category: term.category,
+      });
     } catch {
       setAiExplanation(`**${term.term}**: ${term.context}`);
     } finally {

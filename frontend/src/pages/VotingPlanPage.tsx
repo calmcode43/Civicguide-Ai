@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import SEO from '@/components/SEO';
+import { STAGE_CONTEXTS } from '@/config/assistant';
 import { GoldButton } from '@/components/ui';
+import { trackEvent } from '@/lib/analytics';
 import apiClient from '@/lib/apiClient';
-import type { ApiResponse, OfficialResource } from '@/types';
+import type { ApiResponse, OfficialResource, StageContext } from '@/types';
 
 interface PlanStep {
   id: string;
@@ -91,6 +93,7 @@ const WIZARD_STEPS: PlanStep[] = [
 export default function VotingPlanPage() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, string>>({});
+  const [stageContext, setStageContext] = useState<StageContext>('Polling Day');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState<string | null>(null);
   const [sources, setSources] = useState<OfficialResource[]>([]);
@@ -115,11 +118,15 @@ export default function VotingPlanPage() {
         registration_status: selections.registration,
         location_context: selections.location,
         planning_focus: selections.focus,
+        stage_context: stageContext,
         language: 'en',
       });
 
       setGeneratedPlan(response.data.data.plan_markdown);
       setSources(response.data.data.sources ?? []);
+      await trackEvent('voting_plan_generated', {
+        stage_context: stageContext,
+      });
     } catch {
       setError('Failed to generate your plan. Please try again.');
     } finally {
@@ -161,6 +168,37 @@ export default function VotingPlanPage() {
           </p>
         </header>
 
+        <section className="mb-8 rounded-3xl border border-border/40 bg-abyss/30 p-5 sm:p-6">
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gold">Election Stage Focus</h2>
+              <p className="mt-1 text-xs leading-relaxed text-text-secondary">
+                Choose the stage you are planning for so the checklist emphasizes the right official checks.
+              </p>
+            </div>
+            <span className="rounded-full border border-gold/20 bg-gold/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gold">
+              {stageContext}
+            </span>
+          </div>
+          <div role="group" aria-label="Select the election stage for this plan" className="flex flex-wrap gap-2">
+            {STAGE_CONTEXTS.map((stage) => (
+              <button
+                key={stage}
+                type="button"
+                onClick={() => setStageContext(stage)}
+                className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  stageContext === stage
+                    ? 'border-gold bg-gold/15 text-gold'
+                    : 'border-border/60 bg-void/50 text-text-secondary hover:border-gold/40 hover:text-gold'
+                }`}
+                aria-pressed={stageContext === stage}
+              >
+                {stage}
+              </button>
+            ))}
+          </div>
+        </section>
+
         <div className="relative min-h-[420px]">
           <AnimatePresence mode="wait">
             {isGenerating ? (
@@ -173,7 +211,9 @@ export default function VotingPlanPage() {
               >
                 <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin mb-6" />
                 <p className="text-gold font-bold uppercase tracking-widest animate-pulse">Generating your plan...</p>
-                <p className="text-text-secondary text-xs mt-2">Combining your context with official election guidance</p>
+                <p className="text-text-secondary text-xs mt-2">
+                  Combining your context with official election guidance for {stageContext}
+                </p>
               </motion.div>
             ) : generatedPlan ? (
               <motion.div

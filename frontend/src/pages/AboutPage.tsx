@@ -1,6 +1,7 @@
-import { motion } from 'framer-motion';
-import { GlobeScene, HeroCanvas } from '@/components/three';
+import { motion, useReducedMotion } from 'framer-motion';
 import SEO from '@/components/SEO';
+import DeferredThreeMount from '@/components/three/DeferredThreeMount';
+import { LazyThreeScene } from '@/components/three/LazyThreeScene';
 
 const VALUES = [
   {
@@ -21,6 +22,8 @@ const VALUES = [
 ];
 
 export default function AboutPage() {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <main className="relative bg-void min-h-screen pt-24 pb-20 overflow-hidden">
       <SEO
@@ -29,9 +32,16 @@ export default function AboutPage() {
         path="/about"
       />
 
-      <div className="fixed inset-0 opacity-20 pointer-events-none">
-        <HeroCanvas />
-      </div>
+      {prefersReducedMotion ? (
+        <div className="fixed inset-0 pointer-events-none bg-void opacity-20" aria-hidden="true" />
+      ) : (
+        <DeferredThreeMount
+          className="fixed inset-0 pointer-events-none opacity-20"
+          fallback={<div className="fixed inset-0 pointer-events-none bg-void opacity-20" aria-hidden="true" />}
+        >
+          <LazyThreeScene loader={() => import('@/components/three/HeroCanvas')} />
+        </DeferredThreeMount>
+      )}
 
       <div className="relative z-10 content-width px-6">
         <header className="max-w-3xl mb-24">
@@ -88,7 +98,24 @@ export default function AboutPage() {
             className="aspect-square bg-abyss border border-gold/10 rounded-[2rem] flex items-center justify-center relative overflow-hidden shadow-2xl shadow-gold/5"
           >
             <div className="absolute inset-0 z-0">
-              <GlobeScene />
+              {prefersReducedMotion ? (
+                <div
+                  className="h-full w-full bg-[radial-gradient(circle_at_center,rgba(212,160,23,0.16),transparent_60%)]"
+                  aria-hidden="true"
+                />
+              ) : (
+                <DeferredThreeMount
+                  className="h-full w-full"
+                  fallback={
+                    <div
+                      className="h-full w-full bg-[radial-gradient(circle_at_center,rgba(212,160,23,0.16),transparent_60%)]"
+                      aria-hidden="true"
+                    />
+                  }
+                >
+                  <LazyThreeScene loader={() => import('@/components/three/GlobeScene')} />
+                </DeferredThreeMount>
+              )}
             </div>
 
             <div className="absolute bottom-8 left-8 right-8 z-10 text-center pointer-events-none">

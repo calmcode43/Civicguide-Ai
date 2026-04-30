@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -79,6 +79,9 @@ export default function NavBar() {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const toggleButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
 
   // Close mobile drawer when route changes
   useEffect(() => {
@@ -99,6 +102,48 @@ export default function NavBar() {
   useEffect(() => {
     document.body.style.overflow = isMobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
+  }, [isMobileOpen]);
+
+  useEffect(() => {
+    if (!isMobileOpen) {
+      toggleButtonRef.current?.focus();
+      return;
+    }
+
+    firstLinkRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMobileOpen(false);
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialogRef.current) {
+        return;
+      }
+
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) {
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const activeElement = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey && activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isMobileOpen]);
 
   const isActive = (href: string) =>
@@ -167,6 +212,7 @@ export default function NavBar() {
 
           {/* Hamburger — mobile only */}
           <button
+            ref={toggleButtonRef}
             aria-label={isMobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={isMobileOpen}
             aria-controls="mobile-nav-drawer"
@@ -197,6 +243,7 @@ export default function NavBar() {
         {isMobileOpen && (
           <motion.div
             id="mobile-nav-drawer"
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="Mobile navigation menu"
@@ -230,6 +277,7 @@ export default function NavBar() {
                 transition={{ delay: i * 0.07 + 0.05 }}
               >
                 <Link
+                  ref={i === 0 ? firstLinkRef : undefined}
                   to={href}
                   aria-current={isActive(href) ? 'page' : undefined}
                   style={{

@@ -180,7 +180,7 @@ class GeminiService:
         temperature: float = 0.2,
         top_p: float = 0.8,
     ) -> AsyncGenerator[str, None]:
-        q: "queue.Queue[str | object]" = queue.Queue()
+        q: "queue.Queue[str | Exception | object]" = queue.Queue()
         sentinel = object()
         options = GeminiGenerationOptions(
             max_output_tokens=max_output_tokens,
@@ -193,7 +193,7 @@ class GeminiService:
                 for text in self._stream_sync(prompt=prompt, options=options):
                     q.put(text)
             except Exception as exc:
-                q.put(f"[ERROR] {exc}")
+                q.put(exc)
             finally:
                 q.put(sentinel)
 
@@ -204,4 +204,6 @@ class GeminiService:
             item = await loop.run_in_executor(None, q.get)
             if item is sentinel:
                 break
+            if isinstance(item, Exception):
+                raise item
             yield str(item)

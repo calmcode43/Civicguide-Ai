@@ -36,6 +36,7 @@ class SessionStore(ABC):
         *,
         language: str,
         user_context: str,
+        stage_context: str | None,
     ) -> str:
         raise NotImplementedError
 
@@ -85,6 +86,7 @@ class InMemorySessionStore(SessionStore):
         *,
         language: str,
         user_context: str,
+        stage_context: str | None,
     ) -> str:
         now = _utcnow()
         concrete_id = session_id or f"session_{uuid4().hex[:12]}"
@@ -94,6 +96,7 @@ class InMemorySessionStore(SessionStore):
                 "id": concrete_id,
                 "title": "New conversation",
                 "user_context": user_context,
+                "stage_context": stage_context,
                 "language": language,
                 "message_count": 0,
                 "created_at": now,
@@ -104,6 +107,7 @@ class InMemorySessionStore(SessionStore):
             session["updated_at"] = now
             session["language"] = language
             session["user_context"] = user_context
+            session["stage_context"] = stage_context
         return concrete_id
 
     async def add_message(
@@ -160,6 +164,7 @@ class InMemorySessionStore(SessionStore):
                 id=session["id"],
                 title=session["title"],
                 user_context=session["user_context"],
+                stage_context=session.get("stage_context"),
                 language=session["language"],
                 message_count=session["message_count"],
                 updated_at=session["updated_at"],
@@ -175,6 +180,7 @@ class InMemorySessionStore(SessionStore):
             id=session["id"],
             title=session["title"],
             user_context=session["user_context"],
+            stage_context=session.get("stage_context"),
             language=session["language"],
             message_count=session["message_count"],
             updated_at=session["updated_at"],
@@ -207,6 +213,7 @@ class FirestoreSessionStore(SessionStore):
         *,
         language: str,
         user_context: str,
+        stage_context: str | None,
     ) -> str:
         now = _utcnow()
         if not session_id:
@@ -216,6 +223,7 @@ class FirestoreSessionStore(SessionStore):
                 {
                     "title": "New conversation",
                     "user_context": user_context,
+                    "stage_context": stage_context,
                     "language": language,
                     "message_count": 0,
                     "created_at": now,
@@ -230,6 +238,7 @@ class FirestoreSessionStore(SessionStore):
             await session_ref.set(
                 {
                     "user_context": user_context,
+                    "stage_context": stage_context,
                     "language": language,
                     "updated_at": now,
                 },
@@ -240,6 +249,7 @@ class FirestoreSessionStore(SessionStore):
                 {
                     "title": "New conversation",
                     "user_context": user_context,
+                    "stage_context": stage_context,
                     "language": language,
                     "message_count": 0,
                     "created_at": now,
@@ -330,6 +340,7 @@ class FirestoreSessionStore(SessionStore):
                     id=doc.id,
                     title=data.get("title", "New conversation"),
                     user_context=data.get("user_context", "general"),
+                    stage_context=data.get("stage_context"),
                     language=data.get("language", "en"),
                     message_count=int(data.get("message_count", 0)),
                     updated_at=data.get("updated_at") or data.get("created_at") or _utcnow(),
@@ -347,6 +358,7 @@ class FirestoreSessionStore(SessionStore):
             id=session_id,
             title=data.get("title", "New conversation"),
             user_context=data.get("user_context", "general"),
+            stage_context=data.get("stage_context"),
             language=data.get("language", "en"),
             message_count=int(data.get("message_count", 0)),
             updated_at=data.get("updated_at") or data.get("created_at") or _utcnow(),

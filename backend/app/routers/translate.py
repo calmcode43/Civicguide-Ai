@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 
 from fastapi import APIRouter, HTTPException
@@ -8,6 +9,7 @@ from app.models.schemas import ApiResponse, TranslatePayload, TranslateRequest
 from app.services.translate_service import SUPPORTED_LANGUAGES, translate_text
 
 router = APIRouter(prefix="/api", tags=["translate"])
+logger = logging.getLogger("civicmind.translate")
 
 HTML_TAG_RE = re.compile(r"<[^>]*>")
 
@@ -33,7 +35,8 @@ async def translate(payload: TranslateRequest) -> ApiResponse[TranslatePayload]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.exception("Translation request failed")
+        raise HTTPException(status_code=503, detail="Translation service unavailable") from exc
 
     return ApiResponse(
         data=TranslatePayload(

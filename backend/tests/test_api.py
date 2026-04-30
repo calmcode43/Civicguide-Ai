@@ -13,10 +13,12 @@ def test_health_endpoint_reports_backend_status() -> None:
         response = client.get("/api/health")
 
     assert root_response.status_code == 200
+    assert root_response.headers["X-Request-ID"].startswith("req_")
     root_payload = root_response.json()["data"]
     assert root_payload["service"] == "civicmind-api"
     assert root_payload["health_path"] == "/api/health"
     assert response.status_code == 200
+    assert response.headers["X-Request-ID"].startswith("req_")
     payload = response.json()["data"]
     assert payload["service"] == "civicmind-api"
     assert payload["backend_ready"] is True

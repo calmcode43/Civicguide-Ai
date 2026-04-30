@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,8 +23,10 @@ from app.services.assistant_service import AssistantService
 from app.services.config import get_settings
 from app.services.gemini_service import GeminiService
 from app.services.session_store import build_session_store
+from app.services.translate_service import is_translate_ready
 
 VERSION = "2.0.0"
+logger = logging.getLogger("civicmind.api")
 
 
 @asynccontextmanager
@@ -74,6 +78,14 @@ def create_app() -> FastAPI:
     app.include_router(translate_router)
     app.include_router(timeline_router)
 
+    @app.middleware("http")
+    async def add_request_context(request: Request, call_next):
+        request_id = request.headers.get("x-request-id") or f"req_{uuid4().hex[:12]}"
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
     @app.get("/", response_model=ApiResponse[RootPayload], tags=["health"])
     async def root_status() -> ApiResponse[RootPayload]:
         return ApiResponse(
@@ -97,6 +109,7 @@ def create_app() -> FastAPI:
             environment=active_settings.ENVIRONMENT,
             backend_ready=True,
             gemini_ready=assistant_service.gemini_service is not None,
+            translate_ready=is_translate_ready(),
             firestore_mode=session_store.mode,
             rate_limit_per_minute=active_settings.RATE_LIMIT_PER_MINUTE,
             cloud_project_id=active_settings.GOOGLE_CLOUD_PROJECT or None,
@@ -110,7 +123,21 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        return JSONResponse(status_code=500, content={"detail": str(exc)})
+        logger.exception(
+            "Unhandled server error",
+            extra={
+                "request_id": getattr(request.state, "request_id", None),
+                "path": request.url.path,
+                "method": request.method,
+            },
+        )
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
+        if getattr(request.state, "request_id", None):
+            response.headers["X-Request-ID"] = request.state.request_id
+        return response
 
     return app
 

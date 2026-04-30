@@ -27,7 +27,7 @@ export default function App() {
     <BrowserRouter>
       <SkipToContent />
       <NavBar />
-      <div className="pt-16">
+      <div className="pt-16" id="main-content">
         <Suspense fallback={<PageLoadSpinner />}>
           <Routes>
             <Route path="/" element={<LandingPage />} />

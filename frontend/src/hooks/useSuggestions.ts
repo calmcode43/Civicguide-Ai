@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import apiClient from '../lib/apiClient';
-import type { ApiResponse, SuggestionsPayload } from '@/types';
 
-export function useSuggestions(persona: string) {
+import type { ApiResponse, StageContext, SuggestionsPayload } from '@/types';
+
+import apiClient from '../lib/apiClient';
+
+export function useSuggestions(persona: string, stageContext: StageContext) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -10,7 +12,7 @@ export function useSuggestions(persona: string) {
     setIsLoading(true);
     apiClient
       .get<ApiResponse<SuggestionsPayload>>('/api/suggestions', {
-        params: { persona, language: 'en' },
+        params: { persona, language: 'en', stage_context: stageContext },
       })
       .then((response) => {
         setSuggestions(response.data.data.suggestions ?? []);
@@ -21,7 +23,7 @@ export function useSuggestions(persona: string) {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [persona]);
+  }, [persona, stageContext]);
 
   return { suggestions, isLoading };
 }
