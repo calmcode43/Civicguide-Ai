@@ -211,6 +211,33 @@ async def test_assistant_service_streams_deterministic_fallback_when_gemini_stre
     assert "Voters' Service Portal" in reply or "https://voters.eci.gov.in/" in reply
 
 
+class SlowStreamGeminiService:
+    async def stream(self, prompt: str, *, max_output_tokens: int, **_: object):
+        await asyncio.sleep(10)
+        yield prompt
+
+
+@pytest.mark.asyncio
+async def test_assistant_service_times_out_stream_to_deterministic_fallback() -> None:
+    assistant = AssistantService(
+        SlowStreamGeminiService(),  # type: ignore[arg-type]
+        chat_completion_timeout_seconds=2,
+    )
+    prepared = assistant.prepare_chat(
+        message="How do I find my polling booth?",
+        history=[],
+        language="en",
+        user_context="First-Time Voter",
+        stage_context="Polling Day",
+    )
+
+    chunks = [chunk async for chunk in assistant.stream_chat_reply(prepared)]
+    reply = "".join(chunks)
+
+    assert "polling booth" in reply.lower() or "voters' service portal" in reply.lower()
+    assert "Use this stage as your anchor" not in reply
+
+
 class SlowGeminiService:
     async def complete(self, prompt: str, *, max_output_tokens: int, **_: object) -> str:
         await asyncio.sleep(1.1)

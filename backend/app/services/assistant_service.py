@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import AsyncGenerator, Iterable
 
@@ -465,23 +466,43 @@ Useful follow-up directions:
             return [reply.strip()]
         return []
 
+    def _stream_timeout_seconds(self, *, received_first_chunk: bool) -> float:
+        if not received_first_chunk:
+            return max(min(self.chat_completion_timeout_seconds - 2.0, 6.0), 2.0)
+        return max(min(self.chat_completion_timeout_seconds / 2, 4.0), 2.0)
+
     async def stream_chat_reply(self, prepared: PreparedChat) -> AsyncGenerator[str, None]:
         if self.gemini_service is None:
             for chunk in self.chunk_reply(prepared.fallback_reply):
                 yield chunk
             return
 
+        stream = self.gemini_service.stream(
+            prepared.prompt,
+            max_output_tokens=self.chat_max_output_tokens,
+        )
+        yielded_chunk = False
+
         try:
-            async for chunk in self.gemini_service.stream(
-                prepared.prompt,
-                max_output_tokens=self.chat_max_output_tokens,
-            ):
+            while True:
+                chunk = await asyncio.wait_for(
+                    anext(stream),
+                    timeout=self._stream_timeout_seconds(received_first_chunk=yielded_chunk),
+                )
                 if chunk:
+                    yielded_chunk = True
                     yield chunk
+        except StopAsyncIteration:
+            return
         except Exception as exc:
             logger.warning("Falling back to deterministic stream reply: %s", exc)
+            if yielded_chunk:
+                return
             for chunk in self.chunk_reply(prepared.fallback_reply):
                 yield chunk
+        finally:
+            with suppress(Exception):
+                await stream.aclose()
 
     async def generate_chat_response(
         self,
